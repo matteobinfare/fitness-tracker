@@ -118,12 +118,15 @@ const FitnessApp = () => {
     setRegisterCode('');
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setIsLoggedIn(false);
-    localStorage.removeItem('fitness-current-user');
-    setActiveTab('workout');
-  };
+const handleLogout = () => {
+  setCurrentUser(null);
+  setIsLoggedIn(false);
+  setLoginName('');           // Add this
+  setLoginPassword('');       // Add this
+  setIsRegistering(false);    // Add this
+  localStorage.removeItem('fitness-current-user');
+  setActiveTab('workout');
+};
 
   // Cardio
   const [cardioType, setCardioType] = useState('Running');
