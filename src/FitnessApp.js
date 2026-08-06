@@ -230,37 +230,26 @@ const FitnessApp = () => {
     { name: 'Dumbbell Farmer Carry', category: 'Core' }
   ];
 
-  // Load data
-  useEffect(() => {
-    const saved = localStorage.getItem('fitness-data-v2');
-    if (saved) {
-      const data = JSON.parse(saved);
-      setWorkoutSessions(data.workouts || []);
-      setCardioSessions(data.cardio || []);
-      setBodyWeightEntries(data.bodyWeight || []);
-      setGoal(data.goal || 75);
-    }
-  }, []);
+  const getTodaySession = () => {
+    return workoutSessions.find(s => s.date === selectedDate);
+  };
 
-  // Load exercises for selected date
-  useEffect(() => {
-    const existing = workoutSessions.find(s => s.date === selectedDate);
-    if (existing) {
-      setCurrentExercises(existing.exercises);
-    } else {
-      setCurrentExercises([]);
-    }
-  }, [selectedDate, workoutSessions]);
+  const getCurrentExercises = () => {
+    const today = getTodaySession();
+    if (today) return today.exercises;
+    return [];
+  };
 
-  // Save data
-  useEffect(() => {
-    localStorage.setItem('fitness-data-v2', JSON.stringify({
-      workouts: workoutSessions,
-      cardio: cardioSessions,
-      bodyWeight: bodyWeightEntries,
-      goal
-    }));
-  }, [workoutSessions, cardioSessions, bodyWeightEntries, goal]);
+  const saveWorkout = () => {
+    if (currentExercises.length === 0) {
+      alert('Add at least one exercise');
+      return;
+    }
+    const newSessions = workoutSessions.filter(s => s.date !== selectedDate);
+    newSessions.push({ date: selectedDate, exercises: currentExercises });
+    setWorkoutSessions(newSessions.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    alert('Workout logged! 💪');
+  };
 
   const addExerciseToWorkout = (exerciseName) => {
     const newExercise = {
@@ -306,17 +295,6 @@ const FitnessApp = () => {
     }));
   };
 
-  const saveWorkout = () => {
-    if (currentExercises.length === 0) {
-      alert('Add at least one exercise');
-      return;
-    }
-    const newSessions = workoutSessions.filter(s => s.date !== selectedDate);
-    newSessions.push({ date: selectedDate, exercises: currentExercises });
-    setWorkoutSessions(newSessions.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    alert('Workout logged! 💪');
-  };
-
   const addCardio = () => {
     if (!cardioDistance && !cardioTime) {
       alert('Add distance or time');
@@ -350,23 +328,6 @@ const FitnessApp = () => {
 
   const getRecentWorkouts = () => {
     return workoutSessions.slice().reverse().slice(0, 10);
-  };
-
-  const bodyWeightTrend = bodyWeightEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const getStats = () => {
-    return {
-      totalWorkouts: workoutSessions.length,
-      totalCardio: cardioSessions.length,
-      currentWeight: bodyWeightTrend.length > 0 ? bodyWeightTrend[bodyWeightTrend.length - 1].weight : null,
-      weeklyDistance: cardioSessions
-        .filter(c => {
-          const today = new Date();
-          const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
-          return new Date(c.date) >= weekStart;
-        })
-        .reduce((sum, c) => sum + c.distance, 0)
-    };
   };
 
   const getExerciseProgressData = (exerciseName) => {
@@ -426,6 +387,22 @@ const FitnessApp = () => {
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   };
 
+  const getStats = () => {
+    return {
+      totalWorkouts: workoutSessions.length,
+      totalCardio: cardioSessions.length,
+      currentWeight: bodyWeightEntries.length > 0 ? bodyWeightEntries[bodyWeightEntries.length - 1].weight : null,
+      weeklyDistance: cardioSessions
+        .filter(c => {
+          const today = new Date();
+          const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+          return new Date(c.date) >= weekStart;
+        })
+        .reduce((sum, c) => sum + c.distance, 0)
+    };
+  };
+
+  const bodyWeightTrend = bodyWeightEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
   const stats = getStats();
   const usedExercises = new Set(currentExercises.map(ex => ex.name));
   const availableExercises = allExercises.filter(ex => !usedExercises.has(ex.name));
@@ -550,7 +527,7 @@ const FitnessApp = () => {
               </div>
             ) : (
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 24px 0', color: darkMode ? '#e0e0e0' : '#333' }}>Create Account</h2>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 24px 0', color: darkMode ? '#fff' : '#333' }}>Create Account</h2>
                 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: darkMode ? '#b0b0b0' : '#666', marginBottom: '6px' }}>Name</label>
@@ -562,13 +539,15 @@ const FitnessApp = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '2px solid #e0e0e0',
+                      border: `2px solid ${darkMode ? '#333' : '#e0e0e0'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      background: darkMode ? '#2a2a3e' : '#fff',
+                      color: darkMode ? '#fff' : '#333'
                     }}
                     onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                    onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                    onBlur={(e) => e.target.style.borderColor = darkMode ? '#333' : '#e0e0e0'}
                   />
                 </div>
 
@@ -582,13 +561,15 @@ const FitnessApp = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '2px solid #e0e0e0',
+                      border: `2px solid ${darkMode ? '#333' : '#e0e0e0'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      background: darkMode ? '#2a2a3e' : '#fff',
+                      color: darkMode ? '#fff' : '#333'
                     }}
                     onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                    onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                    onBlur={(e) => e.target.style.borderColor = darkMode ? '#333' : '#e0e0e0'}
                   />
                 </div>
 
@@ -602,13 +583,15 @@ const FitnessApp = () => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '2px solid #e0e0e0',
+                      border: `2px solid ${darkMode ? '#333' : '#e0e0e0'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      background: darkMode ? '#2a2a3e' : '#fff',
+                      color: darkMode ? '#fff' : '#333'
                     }}
                     onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                    onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                    onBlur={(e) => e.target.style.borderColor = darkMode ? '#333' : '#e0e0e0'}
                   />
                 </div>
 
@@ -781,7 +764,7 @@ const FitnessApp = () => {
             {/* Main Workout Logger */}
             <div style={{ background: darkMode ? '#1a1a2e' : '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ padding: '20px', borderBottom: '2px solid #f0f0f0', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff' }}>
+              <div style={{ padding: '20px', borderBottom: `2px solid ${darkMode ? '#333' : '#f0f0f0'}`, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#fff' }}>Log Your Workout</h2>
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
@@ -795,7 +778,7 @@ const FitnessApp = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '2px solid rgba(255,255,255,0.3)',
+                    border: `2px solid rgba(255,255,255,0.3)`,
                     borderRadius: '8px',
                     fontSize: '14px',
                     boxSizing: 'border-box',
@@ -813,7 +796,7 @@ const FitnessApp = () => {
                 ) : (
                   <div style={{ display: 'grid', gap: '16px', marginBottom: '16px' }}>
                     {currentExercises.map((exercise) => (
-                      <div key={exercise.id} style={{ border: '1px solid #eee', borderRadius: '6px', padding: '16px' }}>
+                      <div key={exercise.id} style={{ border: `1px solid ${darkMode ? '#333' : '#eee'}`, borderRadius: '6px', padding: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <h4 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: darkMode ? '#e0e0e0' : '#333' }}>{exercise.name}</h4>
                           <button
@@ -843,7 +826,9 @@ const FitnessApp = () => {
                                     border: `1px solid ${darkMode ? '#333' : '#ddd'}`,
                                     borderRadius: '4px',
                                     fontSize: '14px',
-                                    boxSizing: 'border-box'
+                                    boxSizing: 'border-box',
+                                    background: darkMode ? '#252535' : '#fff',
+                                    color: darkMode ? '#fff' : '#333'
                                   }}
                                   placeholder="0"
                                 />
@@ -862,7 +847,9 @@ const FitnessApp = () => {
                                     border: `1px solid ${darkMode ? '#333' : '#ddd'}`,
                                     borderRadius: '4px',
                                     fontSize: '14px',
-                                    boxSizing: 'border-box'
+                                    boxSizing: 'border-box',
+                                    background: darkMode ? '#252535' : '#fff',
+                                    color: darkMode ? '#fff' : '#333'
                                   }}
                                   placeholder="8"
                                 />
@@ -894,7 +881,7 @@ const FitnessApp = () => {
                           style={{
                             fontSize: '12px',
                             padding: '6px 10px',
-                            background: '#f0f0f0',
+                            background: darkMode ? '#252535' : '#f0f0f0',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
@@ -972,7 +959,7 @@ const FitnessApp = () => {
                           <p style={{ textAlign: 'center', color: darkMode ? '#888' : '#999' }}>All exercises added</p>
                         ) : (
                           <div style={{ display: 'grid', gap: '8px' }}>
-                            {['Push', 'Pull', 'Legs'].map(category => {
+                            {['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'].map(category => {
                               const categoryExercises = availableExercises.filter(ex => ex.category === category);
                               return categoryExercises.length > 0 ? (
                                 <div key={category}>
@@ -997,8 +984,8 @@ const FitnessApp = () => {
                                         marginBottom: '8px',
                                         transition: 'background 0.2s'
                                       }}
-                                      onTouchStart={(e) => e.target.style.background = '#f0f0f0'}
-                                      onTouchEnd={(e) => e.target.style.background = '#f9f9f9'}
+                                      onTouchStart={(e) => e.target.style.background = darkMode ? '#333' : '#f0f0f0'}
+                                      onTouchEnd={(e) => e.target.style.background = darkMode ? '#252535' : '#f9f9f9'}
                                     >
                                       {ex.name}
                                     </button>
@@ -1035,7 +1022,7 @@ const FitnessApp = () => {
                         <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#888' : '#999', gridColumn: '1 / -1' }}>All exercises added</div>
                       ) : (
                         <>
-                          {['Push', 'Pull', 'Legs'].map(category => {
+                          {['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'].map(category => {
                             const categoryExercises = availableExercises.filter(ex => ex.category === category);
                             return categoryExercises.length > 0 ? (
                               <div key={category} style={{ gridColumn: '1 / -1' }}>
@@ -1049,7 +1036,7 @@ const FitnessApp = () => {
                                       onClick={() => addExerciseToWorkout(ex.name)}
                                       style={{
                                         padding: '12px',
-                                        border: '1px solid #eee',
+                                        border: `1px solid ${darkMode ? '#333' : '#eee'}`,
                                         background: 'none',
                                         textAlign: 'left',
                                         cursor: 'pointer',
@@ -1057,7 +1044,7 @@ const FitnessApp = () => {
                                         color: darkMode ? '#e0e0e0' : '#333',
                                         transition: 'background 0.2s'
                                       }}
-                                      onMouseOver={(e) => e.target.style.background = '#f5f5f5'}
+                                      onMouseOver={(e) => e.target.style.background = darkMode ? '#252535' : '#f5f5f5'}
                                       onMouseOut={(e) => e.target.style.background = 'none'}
                                     >
                                       {ex.name}
@@ -1103,7 +1090,7 @@ const FitnessApp = () => {
                 <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 16px 0', color: '#667eea' }}>Recent Workouts</h3>
                 <div style={{ display: 'grid', gap: '12px' }}>
                   {getRecentWorkouts().map((session, idx) => (
-                    <div key={idx} style={{ padding: '12px', background: darkMode ? '#252535' : '#f9f9f9', borderRadius: '6px', borderLeft: '3px solid #2c3e50' }}>
+                    <div key={idx} style={{ padding: '12px', background: darkMode ? '#252535' : '#f9f9f9', borderRadius: '6px', borderLeft: '3px solid #667eea' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                         <p style={{ margin: 0, fontWeight: 'bold', color: darkMode ? '#e0e0e0' : '#333' }}>{session.exercises.length} exercises</p>
                         <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#888' : '#999' }}>
@@ -1124,7 +1111,7 @@ const FitnessApp = () => {
         {/* CARDIO TAB */}
         {activeTab === 'cardio' && (
           <div>
-            <div style={{ background: darkMode ? '#1a1a2e' : '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
+            <div style={{ background: darkMode ? '#1a1a2e' : '#fff', padding: '20px', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <h3 style={{ margin: '0 0 16px 0', color: '#667eea', fontSize: '16px', fontWeight: 'bold' }}>Log Cardio</h3>
               <div style={{ display: 'grid', gap: '12px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1134,7 +1121,7 @@ const FitnessApp = () => {
                       type="date"
                       value={cardioDate}
                       onChange={(e) => setCardioDate(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                   <div>
@@ -1142,7 +1129,7 @@ const FitnessApp = () => {
                     <select
                       value={cardioType}
                       onChange={(e) => setCardioType(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     >
                       <option>Running</option>
                       <option>Cycling</option>
@@ -1161,7 +1148,7 @@ const FitnessApp = () => {
                       step="0.1"
                       value={cardioDistance}
                       onChange={(e) => setCardioDistance(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                   <div>
@@ -1171,7 +1158,7 @@ const FitnessApp = () => {
                       placeholder="30:45"
                       value={cardioTime}
                       onChange={(e) => setCardioTime(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                   <div>
@@ -1180,7 +1167,7 @@ const FitnessApp = () => {
                       type="number"
                       value={cardioCalories}
                       onChange={(e) => setCardioCalories(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                 </div>
@@ -1242,7 +1229,7 @@ const FitnessApp = () => {
                       step="0.1"
                       value={bodyWeight}
                       onChange={(e) => setBodyWeight(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                   <div>
@@ -1251,7 +1238,7 @@ const FitnessApp = () => {
                       type="date"
                       value={bodyWeightDate}
                       onChange={(e) => setBodyWeightDate(e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                   <div>
@@ -1261,7 +1248,7 @@ const FitnessApp = () => {
                       step="0.1"
                       value={goal}
                       onChange={(e) => setGoal(parseFloat(e.target.value))}
-                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box', background: darkMode ? '#252535' : '#fff', color: darkMode ? '#fff' : '#333' }}
                     />
                   </div>
                 </div>
